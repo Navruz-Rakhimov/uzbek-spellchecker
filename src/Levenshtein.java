@@ -22,8 +22,4 @@ public class Levenshtein {
         return costs[b.length()];
     }
 
-    public static void main(String[] args) {
-        System.out.println(distance("Robert", "Rupert"));
-    }
-
 }

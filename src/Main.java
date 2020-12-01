@@ -1,14 +1,16 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map.Entry;
 
 public class Main {
 
     public static MultiMap<String, String> dict = new MultiMap<>();
+    public static MultiMap<String, String> affixes = new MultiMap<>();
 
-    public static void populateDict(String filename) throws IOException {
+    public static void populateDict(String filename, MultiMap<String, String> dict) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
             String line = null;
 
@@ -19,36 +21,68 @@ public class Main {
         }
     }
 
+
     public static void main(String[] args) {
         try {
-            populateDict("lexicon.txt");
+            populateDict("lexicon.txt", dict);
+            populateDict("oneElementAffix.txt", affixes);
+            populateDict("twoElementsAffixes.txt", affixes);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        String word = "erkak";
+        String word = "daftaringizmikan";
 
-        // search for homophones
-        Collection<String> collection = dict.get(Soundex.soundex(word));
         MultiMap<Integer, String> sortedWords = new MultiMap();
 
-        // pruning results with Levenshtein Distance
-        for (String str: collection) {
-            int distance = Levenshtein.distance(word, str);
+        boolean isFound = false;
+        String temp = word;
+        int affixBoundary;
 
-            if (distance<3) {
-                sortedWords.put(distance, str);
+        for (affixBoundary = temp.length() - 1; affixBoundary >= 0 && !isFound; affixBoundary--){
+            // search for homophones
+            temp = temp.substring(0, affixBoundary);
+
+            Collection<String> collection = dict.get(Soundex.soundex(temp));
+
+            if (collection != null ) {
+
+                // pruning results with Levenshtein Distance
+                for (String str : collection) {
+                    int distance = Levenshtein.distance(temp, str);
+
+                    if (distance == 0) {
+                        sortedWords.put(distance, str);
+                        isFound = true;
+                    }
+                }
             }
         }
 
-        System.out.println("Word mispelled: " + word);
-        System.out.println("Matching words: ");
 
-        for (Entry<Integer, Collection<String>> entry: sortedWords.entrySet()) {
+        String affixPart = word.substring(affixBoundary + 1);
+
+
+        Collection<String> affixesSoundex = affixes.get(Soundex.soundex(affixPart));
+        MultiMap<Integer, String> sortedAffixes = new MultiMap();
+
+        for (String str: affixesSoundex) {
+            int distance = Levenshtein.distance(affixPart, str);
+
+            if (distance < 4) {
+                sortedAffixes.put(distance, str);
+            }
+        }
+
+
+        System.out.println("Current entry: " + word);
+        System.out.println("\nMatching morphemes: ");
+
+        for (Entry<Integer, Collection<String>> entry: sortedAffixes.entrySet()) {
             int value = entry.getKey();
 
             for (String str: entry.getValue()) {
-                System.out.println(str + " - " + value);
+                System.out.println(temp + str + " - " + value);
             }
         }
     }
